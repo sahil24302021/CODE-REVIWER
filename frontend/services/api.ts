@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getSession } from 'next-auth/react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -8,11 +9,21 @@ const api = axios.create({
 });
 
 // Add auth token to requests
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
     if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        try {
+            // Get session from NextAuth
+            const session = await getSession();
+            
+            // Fallback for custom credentials/localStorage if needed, 
+            // but prioritize NextAuth accessToken
+            const token = (session as any)?.accessToken || localStorage.getItem('token');
+            
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+        } catch (error) {
+            console.error("Error attaching token", error);
         }
     }
     return config;

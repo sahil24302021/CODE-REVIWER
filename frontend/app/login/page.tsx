@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react"; // NextAuth hook
 
 export default function LoginPage() {
     const router = useRouter();
@@ -22,18 +23,18 @@ export default function LoginPage() {
 
         setLoading(true);
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-            const res = await fetch(`${API}/auth/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form),
+            // Use NextAuth credential login pattern
+            const res = await signIn("credentials", {
+                redirect: false,
+                email: form.email,
+                password: form.password,
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Invalid credentials");
 
-            localStorage.setItem("token", data.token);
-            localStorage.setItem("user", JSON.stringify(data.user));
-            router.push("/dashboard");
+            if (res?.error) {
+                setError("Invalid email or password");
+            } else {
+                router.push("/dashboard");
+            }
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : "Login failed";
             setError(msg);
@@ -46,6 +47,14 @@ export default function LoginPage() {
         localStorage.setItem("token", "demo-token");
         localStorage.setItem("user", JSON.stringify({ name: "Demo User", email: "demo@codelens.ai", plan: "PRO" }));
         router.push("/dashboard");
+    };
+
+    const handleGitHubLogin = () => {
+        signIn("github", { callbackUrl: "/dashboard" });
+    };
+
+    const handleGoogleLogin = () => {
+        signIn("google", { callbackUrl: "/dashboard" });
     };
 
     return (
