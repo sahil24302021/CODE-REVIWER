@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ai_code_reviewer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - aicode_network
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - FRONTEND_URL=http://localhost:3000
+      - JWT_SECRET=codelens-ai-super-secret-jwt-key-2026-production
+      # Add your real OPENAI_API_KEY below for AI-powered reviews:
+      - OPENAI_API_KEY=your-openai-api-key
+      - DATABASE_URL=postgresql://postgres:password@db:5432/ai_code_reviewer
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+    volumes:
+      - backend_data:/app/data
+    networks:
+      - aicode_network
+    restart: unless-stopped
+
+  # Frontend Web App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - aicode_network
+    restart: unless-stopped
+
+networks:
+  aicode_network:
+    driver: bridge
+
+volumes:
+  backend_data:
+  postgres_data:

@@ -1,0 +1,118 @@
+// Prisma Schema for AI Code Review Tool
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  githubId      String?   @unique
+  githubToken   String?
+  avatarUrl     String?
+  plan          Plan      @default(FREE)
+  stripeCustomerId String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  reviews       Review[]
+  repositories  Repository[]
+  teams         TeamMember[]
+  notifications Notification[]
+}
+
+model Review {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  title           String
+  language        String
+  code            String
+  score           Int?
+  analysis        Json?
+  metrics         Json?
+  status          ReviewStatus @default(PENDING)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Repository {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  githubId      Int
+  name          String
+  fullName      String
+  description   String?
+  language      String?
+  url           String
+  lastAnalyzed  DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Team {
+  id        String       @id @default(uuid())
+  name      String
+  ownerId   String
+  createdAt DateTime     @default(now())
+  members   TeamMember[]
+}
+
+model TeamMember {
+  id     String   @id @default(uuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id])
+  teamId String
+  team   Team     @relation(fields: [teamId], references: [id])
+  role   TeamRole @default(MEMBER)
+
+  @@unique([userId, teamId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      NotificationType
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum ReviewStatus {
+  PENDING
+  ANALYZING
+  COMPLETED
+  FAILED
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum NotificationType {
+  REVIEW_COMPLETE
+  TEAM_INVITE
+  SYSTEM
+}
