@@ -60,22 +60,45 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// GitHub OAuth (mock for demo)
+// GitHub OAuth — find or create user from GitHub profile data
 router.post('/github', async (req, res) => {
     try {
-        const { code } = req.body;
+        const { githubId, email, name, avatarUrl } = req.body;
         
-        const ghId = `gh-${Date.now()}`;
-        let user = await prisma.user.findUnique({ where: { githubId: ghId } });
-        
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required from GitHub profile' });
+        }
+
+        // Try to find by githubId first, then by email
+        let user = null;
+        if (githubId) {
+            user = await prisma.user.findUnique({ where: { githubId: String(githubId) } });
+        }
         if (!user) {
+            user = await prisma.user.findUnique({ where: { email } });
+        }
+
+        if (user) {
+            // Update existing user with GitHub info if needed
+            if (githubId && !user.githubId) {
+                user = await prisma.user.update({
+                    where: { id: user.id },
+                    data: { 
+                        githubId: String(githubId),
+                        avatarUrl: avatarUrl || user.avatarUrl,
+                        name: user.name || name,
+                    }
+                });
+            }
+        } else {
+            // Create new user
             user = await prisma.user.create({
                 data: {
-                    name: 'GitHub User',
-                    email: `github-${Date.now()}@demo.com`,
+                    name: name || email.split('@')[0],
+                    email,
                     plan: 'FREE',
-                    githubId: ghId,
-                    avatarUrl: 'https://github.com/identicons/demo.png',
+                    githubId: githubId ? String(githubId) : null,
+                    avatarUrl: avatarUrl || null,
                 }
             });
         }
@@ -84,6 +107,51 @@ router.post('/github', async (req, res) => {
         const { password: _, ...userWithoutPassword } = user;
         res.json({ user: userWithoutPassword, token });
     } catch (error) {
+        console.error('GitHub auth error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Google OAuth — find or create user from Google profile data
+router.post('/google', async (req, res) => {
+    try {
+        const { email, name, avatarUrl } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required from Google profile' });
+        }
+
+        // Find by email
+        let user = await prisma.user.findUnique({ where: { email } });
+
+        if (user) {
+            // Update name/avatar if missing
+            if (!user.name || !user.avatarUrl) {
+                user = await prisma.user.update({
+                    where: { id: user.id },
+                    data: {
+                        name: user.name || name,
+                        avatarUrl: user.avatarUrl || avatarUrl,
+                    }
+                });
+            }
+        } else {
+            // Create new user
+            user = await prisma.user.create({
+                data: {
+                    name: name || email.split('@')[0],
+                    email,
+                    plan: 'FREE',
+                    avatarUrl: avatarUrl || null,
+                }
+            });
+        }
+
+        const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        const { password: _, ...userWithoutPassword } = user;
+        res.json({ user: userWithoutPassword, token });
+    } catch (error) {
+        console.error('Google auth error:', error);
         res.status(500).json({ error: error.message });
     }
 });

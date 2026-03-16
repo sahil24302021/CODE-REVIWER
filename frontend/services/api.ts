@@ -8,16 +8,12 @@ const api = axios.create({
     headers: { 'Content-Type': 'application/json' },
 });
 
-// Add auth token to requests
+// Add auth token to requests — uses NextAuth session's backend JWT
 api.interceptors.request.use(async (config) => {
     if (typeof window !== 'undefined') {
         try {
-            // Get session from NextAuth
             const session = await getSession();
-            
-            // Fallback for custom credentials/localStorage if needed, 
-            // but prioritize NextAuth accessToken
-            const token = (session as any)?.accessToken || localStorage.getItem('token');
+            const token = (session as any)?.accessToken;
             
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;

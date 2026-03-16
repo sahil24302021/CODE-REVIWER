@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import api from "@/services/api";
@@ -24,26 +26,26 @@ interface RecentReview {
 }
 
 export default function Dashboard() {
+    const { data: session, status } = useSession();
+    const router = useRouter();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [recentReviews, setRecentReviews] = useState<RecentReview[]>([]);
     const [loading, setLoading] = useState(true);
-    const [userName, setUserName] = useState("Developer");
+
+    const userName = session?.user?.name || "Developer";
+
+    // Auth guard — redirect to login if not authenticated
+    useEffect(() => {
+        if (status === "unauthenticated") {
+            router.push("/login");
+        }
+    }, [status, router]);
 
     useEffect(() => {
+        if (status !== "authenticated") return;
+
         const fetchDashboardData = async () => {
             try {
-                // Get user from local storage
-                const storedUser = localStorage.getItem("user");
-                if (storedUser) {
-                    const user = JSON.parse(storedUser);
-                    setUserName(user.name || "Developer");
-                } else if (!localStorage.getItem("token")) {
-                    // Redirect if no token (basic auth guard)
-                    window.location.href = "/login";
-                    return;
-                }
-
-                // Fetch real data from backend
                 const [statsRes, reviewsRes] = await Promise.all([
                     api.get("/analytics/overview").catch(() => null),
                     api.get("/reviews").catch(() => null)
@@ -52,7 +54,6 @@ export default function Dashboard() {
                 if (statsRes?.data) {
                     setStats(statsRes.data);
                 } else {
-                    // Fallback to empty state if API fails
                     setStats({ totalReviews: 0, avgScore: 0, issuesFound: 0, issuesFixed: 0, reviewsThisMonth: 0, scoreImprovement: 0 });
                 }
 
@@ -71,7 +72,7 @@ export default function Dashboard() {
         };
 
         fetchDashboardData();
-    }, []);
+    }, [status]);
 
     const statCards = [
         { title: "Total Reviews", value: stats?.totalReviews || 0, color: "blue", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg> },
@@ -79,6 +80,21 @@ export default function Dashboard() {
         { title: "Issues Found", value: stats?.issuesFound || 0, color: "red", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3.003 3.003 0 116 0v1" /><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 014-4h4a4 4 0 014 4v3c0 3.3-2.7 6-6 6z" /><path d="M12 20v-9" /></svg> },
         { title: "Issues Resolved", value: stats?.issuesFixed || 0, color: "yellow", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg> },
     ];
+
+    // Show loading while checking auth
+    if (status === "loading") {
+        return (
+            <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)" }}>
+                <Sidebar />
+                <main className="main-content" style={{ flex: 1, padding: "48px 56px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ textAlign: "center" }}>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" style={{ animation: "spin-slow 1s linear infinite", marginBottom: 16 }}><path d="M21 12a9 9 0 11-6.219-8.56" /></svg>
+                        <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>Loading dashboard...</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)" }}>

@@ -64,9 +64,19 @@ export default function SignupPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Registration failed");
 
-            localStorage.setItem("token", data.token);
-            localStorage.setItem("user", JSON.stringify(data.user));
-            router.push("/dashboard");
+            // After successful registration, auto-login via NextAuth
+            const signInRes = await signIn("credentials", {
+                redirect: false,
+                email: form.email,
+                password: form.password,
+            });
+
+            if (signInRes?.error) {
+                // Registration succeeded but auto-login failed — redirect to login
+                router.push("/login");
+            } else {
+                router.push("/dashboard");
+            }
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : "Signup failed";
             setError(msg);
@@ -85,8 +95,6 @@ export default function SignupPage() {
 
     return (
         <div style={{ display: "flex", minHeight: "100vh", position: "relative" }}>
-
-
 
             {/* ═══ Left Brand Panel ═══ */}
             <div style={{

@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react"; // NextAuth hook
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
     const router = useRouter();
     const [form, setForm] = useState({ email: "", password: "" });
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [oauthLoading, setOauthLoading] = useState<string | null>(null);
     const [error, setError] = useState("");
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -23,7 +24,6 @@ export default function LoginPage() {
 
         setLoading(true);
         try {
-            // Use NextAuth credential login pattern
             const res = await signIn("credentials", {
                 redirect: false,
                 email: form.email,
@@ -44,17 +44,17 @@ export default function LoginPage() {
     };
 
     const handleGitHubLogin = () => {
+        setOauthLoading("github");
         signIn("github", { callbackUrl: "/dashboard" });
     };
 
     const handleGoogleLogin = () => {
+        setOauthLoading("google");
         signIn("google", { callbackUrl: "/dashboard" });
     };
 
     return (
         <div style={{ display: "flex", minHeight: "100vh", position: "relative" }}>
-
-
 
             {/* ═══ Left Brand Panel ═══ */}
             <div style={{
@@ -65,7 +65,7 @@ export default function LoginPage() {
             }}>
                 <div className="grid-pattern" style={{ position: "absolute", inset: 0, opacity: 0.8 }} />
 
-                <div style={{ position: "relative", maxWidth: 420 }}>
+                <div className="animate-fade-in" style={{ position: "relative", maxWidth: 420 }}>
                     {/* Logo */}
                     <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 48, textDecoration: "none" }}>
                         <div style={{
@@ -88,11 +88,11 @@ export default function LoginPage() {
                     {/* Feature pills */}
                     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                         {[
-                            { icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>, text: "Instant code analysis powered by GPT-4o" },
+                            { icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>, text: "Instant code analysis powered by Gemini AI" },
                             { icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>, text: "OWASP Top 10 security scanning" },
                             { icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" /></svg>, text: "Direct GitHub & CI/CD integration" },
                         ].map((item, i) => (
-                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13.5, color: "var(--text-secondary)" }}>
+                            <div key={i} className="animate-fade-in" style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13.5, color: "var(--text-secondary)", animationDelay: `${0.1 + i * 0.1}s` }}>
                                 <div style={{
                                     width: 30, height: 30, borderRadius: 8,
                                     background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
@@ -112,7 +112,7 @@ export default function LoginPage() {
                 background: "var(--bg-secondary)",
                 borderLeft: "1px solid var(--border-color)",
             }}>
-                <div style={{ maxWidth: 360, width: "100%" }}>
+                <div className="animate-fade-in" style={{ maxWidth: 360, width: "100%", animationDelay: "0.15s" }}>
                     {/* Prominent Back Button */}
                     <Link
                         href="/"
@@ -133,27 +133,47 @@ export default function LoginPage() {
                     <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 32 }}>Sign in to your account to continue</p>
 
                     {/* GitHub Button */}
-                    <button onClick={handleGitHubLogin} className="btn-secondary" style={{
-                        width: "100%", padding: 13, justifyContent: "center", marginBottom: 14,
-                        fontWeight: 600,
-                    }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" /></svg>
+                    <button 
+                        onClick={handleGitHubLogin} 
+                        disabled={oauthLoading !== null}
+                        className="btn-secondary" 
+                        style={{
+                            width: "100%", padding: 13, justifyContent: "center", marginBottom: 14,
+                            fontWeight: 600, opacity: oauthLoading && oauthLoading !== "github" ? 0.5 : 1,
+                            transition: "all 0.2s",
+                        }}
+                    >
+                        {oauthLoading === "github" ? (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin-slow 1s linear infinite" }}><path d="M21 12a9 9 0 11-6.219-8.56" /></svg>
+                        ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" /></svg>
+                        )}
                         Continue with GitHub
                     </button>
 
                     {/* Google Button */}
-                    <button onClick={handleGoogleLogin} className="btn-secondary" style={{
-                        width: "100%", padding: 13, justifyContent: "center", marginBottom: 28,
-                        fontWeight: 600,
-                    }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                             <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
-                                <path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z"/>
-                                <path fill="#34A853" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.379 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z"/>
-                                <path fill="#FBBC05" d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z"/>
-                                <path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.099 -17.884 43.989 -14.754 43.989 Z"/>
-                            </g>
-                        </svg>
+                    <button 
+                        onClick={handleGoogleLogin} 
+                        disabled={oauthLoading !== null}
+                        className="btn-secondary" 
+                        style={{
+                            width: "100%", padding: 13, justifyContent: "center", marginBottom: 28,
+                            fontWeight: 600, opacity: oauthLoading && oauthLoading !== "google" ? 0.5 : 1,
+                            transition: "all 0.2s",
+                        }}
+                    >
+                        {oauthLoading === "google" ? (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin-slow 1s linear infinite" }}><path d="M21 12a9 9 0 11-6.219-8.56" /></svg>
+                        ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                 <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
+                                    <path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z"/>
+                                    <path fill="#34A853" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.379 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z"/>
+                                    <path fill="#FBBC05" d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z"/>
+                                    <path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.099 -17.884 43.989 -14.754 43.989 Z"/>
+                                </g>
+                            </svg>
+                        )}
                         Continue with Google
                     </button>
 
@@ -165,7 +185,7 @@ export default function LoginPage() {
                     </div>
 
                     {error && (
-                        <div style={{
+                        <div className="animate-fade-in" style={{
                             padding: "10px 14px", borderRadius: "var(--radius-sm)", marginBottom: 20,
                             background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.15)",
                             fontSize: 13, color: "#f87171", display: "flex", alignItems: "center", gap: 8,

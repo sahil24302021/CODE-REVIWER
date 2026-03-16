@@ -1,30 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Sidebar() {
     const pathname = usePathname();
-    const router = useRouter();
-    const [user, setUser] = useState<{ name?: string, email?: string } | null>(null);
+    const { data: session } = useSession();
 
-    useEffect(() => {
-        // Hydrate user from localStorage on mount
-        const stored = localStorage.getItem("user");
-        if (stored) {
-            try {
-                setUser(JSON.parse(stored));
-            } catch (e) {
-                console.error("Failed to parse user", e);
-            }
-        }
-    }, []);
+    const userName = session?.user?.name || "Developer";
+    const userEmail = session?.user?.email || "";
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        router.push("/login");
+        signOut({ callbackUrl: "/login" });
     };
 
     const navItems = [
@@ -93,17 +81,29 @@ export default function Sidebar() {
 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 4px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{
-                            width: 32, height: 32, borderRadius: "50%",
-                            background: "rgba(255,255,255,0.1)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 12, fontWeight: 700, color: "var(--text-primary)",
-                        }}>
-                            {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
-                        </div>
+                        {session?.user?.image ? (
+                            <img 
+                                src={session.user.image} 
+                                alt={userName}
+                                style={{
+                                    width: 32, height: 32, borderRadius: "50%",
+                                    objectFit: "cover",
+                                    border: "1px solid rgba(255,255,255,0.1)",
+                                }}
+                            />
+                        ) : (
+                            <div style={{
+                                width: 32, height: 32, borderRadius: "50%",
+                                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 12, fontWeight: 700, color: "white",
+                            }}>
+                                {userName.charAt(0).toUpperCase()}
+                            </div>
+                        )}
                         <div style={{ overflow: "hidden" }}>
                             <div style={{ fontSize: 13, fontWeight: 600, textOverflow: "ellipsis", whiteSpace: "nowrap", overflow: "hidden", maxWidth: 120 }}>
-                                {user?.name || "Developer"}
+                                {userName}
                             </div>
                             <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Free Plan</div>
                         </div>

@@ -1,25 +1,27 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Editor from "@monaco-editor/react";
 import api from "@/services/api";
-import { useRouter } from "next/navigation";
 
 export default function CodeReviewPage() {
     const router = useRouter();
+    const { status } = useSession();
     const [code, setCode] = useState("// Paste your code here\n");
     const [language, setLanguage] = useState("javascript");
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [fileName, setFileName] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Auth guard
+    // Auth guard using NextAuth
     useEffect(() => {
-        if (!localStorage.getItem("token")) {
+        if (status === "unauthenticated") {
             router.push("/login");
         }
-    }, [router]);
+    }, [status, router]);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -48,7 +50,6 @@ export default function CodeReviewPage() {
                 title: fileName || `${language} snippet - ${new Date().toLocaleDateString()}`,
             });
             if (res.data && res.data.review) {
-                // Store in sessionStorage for immediate access
                 sessionStorage.setItem(`review-${res.data.review.id}`, JSON.stringify(res.data.review));
                 router.push(`/review/${res.data.review.id}`);
                 return;
@@ -109,6 +110,17 @@ export default function CodeReviewPage() {
             router.push(`/review/${mockId}`);
         }, 2000);
     };
+
+    if (status === "loading") {
+        return (
+            <div style={{ display: "flex", minHeight: "100vh" }}>
+                <Sidebar />
+                <main className="main-content" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" style={{ animation: "spin-slow 1s linear infinite" }}><path d="M21 12a9 9 0 11-6.219-8.56" /></svg>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div style={{ display: "flex", minHeight: "100vh" }}>
