@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import api from "@/services/api";
 
 interface OverviewData {
@@ -23,14 +24,16 @@ interface TrendsData {
 export default function AnalyticsPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
+    const { status } = useSession();
     const [overview, setOverview] = useState<OverviewData | null>(null);
     const [trends, setTrends] = useState<TrendsData | null>(null);
 
     useEffect(() => {
-        if (!localStorage.getItem("token")) {
+        if (status === "unauthenticated") {
             router.push("/login");
             return;
         }
+        if (status !== "authenticated") return;
 
         const fetchData = async () => {
             try {
@@ -48,7 +51,7 @@ export default function AnalyticsPage() {
         };
 
         fetchData();
-    }, [router]);
+    }, [status, router]);
 
     const scoreData = trends?.qualityTrend?.length
         ? trends.qualityTrend.map(t => t.score)

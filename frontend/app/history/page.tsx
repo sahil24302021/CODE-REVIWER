@@ -4,20 +4,23 @@ import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import api from "@/services/api";
 
 export default function HistoryPage() {
     const router = useRouter();
     const [reviews, setReviews] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const { status } = useSession();
     const [searchTerm, setSearchTerm] = useState("");
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!localStorage.getItem("token")) {
+        if (status === "unauthenticated") {
             router.push("/login");
             return;
         }
+        if (status !== "authenticated") return;
 
         const fetchHistory = async () => {
             try {
@@ -36,7 +39,7 @@ export default function HistoryPage() {
         };
 
         fetchHistory();
-    }, [router]);
+    }, [status, router]);
 
     const filteredReviews = reviews.filter(r => 
         (r.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||

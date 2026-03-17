@@ -3,40 +3,28 @@
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import api from "@/services/api";
 
 export default function SettingsPage() {
     const router = useRouter();
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const { data: session, status, update } = useSession();
     const [name, setName] = useState("");
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState("");
 
+    // Initialize state from session
     useEffect(() => {
-        const fetchUser = async () => {
-            if (!localStorage.getItem("token")) {
-                router.push("/login");
-                return;
-            }
-            try {
-                const res = await api.get("/auth/me");
-                setUser(res.data.user);
-                setName(res.data.user.name || "");
-            } catch (err) {
-                console.error(err);
-                const storedUser = localStorage.getItem("user");
-                if (storedUser) {
-                    const parsed = JSON.parse(storedUser);
-                    setUser(parsed);
-                    setName(parsed.name || "");
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchUser();
-    }, [router]);
+        if (status === "unauthenticated") {
+            router.push("/login");
+        } else if (status === "authenticated") {
+            setUser(session?.user);
+            setName(session?.user?.name || "");
+            setLoading(false);
+        }
+    }, [status, session, router]);
 
     const handleSaveProfile = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,7 +32,7 @@ export default function SettingsPage() {
         try {
             const res = await api.put("/auth/profile", { name });
             setUser(res.data.user);
-            localStorage.setItem("user", JSON.stringify(res.data.user));
+            update({ name: res.data.user.name }); // Update NextAuth session
             setMessage("Profile updated successfully!");
             setTimeout(() => setMessage(""), 3000);
         } catch (err) {

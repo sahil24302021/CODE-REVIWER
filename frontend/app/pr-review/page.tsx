@@ -3,18 +3,20 @@
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function PRReviewPage() {
     const router = useRouter();
     const [prUrl, setPrUrl] = useState("");
+    const { status } = useSession();
     const [analyzing, setAnalyzing] = useState(false);
     const [showResult, setShowResult] = useState(false);
 
     useEffect(() => {
-        if (!localStorage.getItem("token")) {
+        if (status === "unauthenticated") {
             router.push("/login");
         }
-    }, [router]);
+    }, [status, router]);
 
     const handleAnalyze = (e: React.FormEvent) => {
         e.preventDefault();

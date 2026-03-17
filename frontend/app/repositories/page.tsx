@@ -3,19 +3,23 @@
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function RepositoriesPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
+    const { status } = useSession();
     const [linked, setLinked] = useState(false);
 
     useEffect(() => {
-        if (!localStorage.getItem("token")) {
+        if (status === "unauthenticated") {
             router.push("/login");
             return;
         }
-        setTimeout(() => setLoading(false), 600);
-    }, [router]);
+        if (status === "authenticated") {
+            setTimeout(() => setLoading(false), 600);
+        }
+    }, [status, router]);
 
     const handleConnect = () => {
         setLinked(true);
