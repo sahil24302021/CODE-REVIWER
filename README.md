@@ -2,7 +2,7 @@
 
 CodeLens AI is a modern, full-stack SaaS application that provides automated, AI-powered code reviews. By analyzing your source code, it detects bugs, security vulnerabilities, performance bottlenecks, and style issues, providing actionable feedback within seconds.
 
-![CodeLens Dashboard Preview](https://code-reviwer-three.vercel.app/)
+https://code-reviwer-three.vercel.app/
 
 ---
 
